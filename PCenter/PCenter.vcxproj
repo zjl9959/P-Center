@@ -86,7 +86,9 @@
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <PostBuildEvent>
-      <Message>copy $(TargetPath) $(SolutionDir)deploy\$(TargetFileName)</Message>
+      <Message>
+      </Message>
+      <Command>copy $(TargetPath) $(SolutionDir)deploy\$(TargetFileName)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -117,7 +119,9 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Message>copy $(TargetPath) $(SolutionDir)deploy\$(TargetFileName)</Message>
+      <Message>
+      </Message>
+      <Command>copy $(TargetPath) $(SolutionDir)deploy\$(TargetFileName)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
