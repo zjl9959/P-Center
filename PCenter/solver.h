@@ -3,17 +3,25 @@
 #define PCENTER_SOLVER_H
 
 #include <vector>
-#include <map>
+#include <ctime>
+#include <random>
 
 namespace pcenter_solver {
 
 class Solver {
 public:
     enum InstanceType { TSP, TXT };
-    enum PathType {DirectTo = -1, NoPath = -2};
-    const double kMaxWeight = 1000000.0;
+    const double kINF = 1000000.0;
 public:
-    explicit Solver(int P = 0) :facility_num_(P), vertex_num_(0) {}
+    explicit Solver(int P = 0, unsigned int seed = 0) :facility_num_(P), vertex_num_(0) {
+        if (seed == 0) {  //set random seed
+            unsigned int time_now = time(NULL);
+            random_seed_ = time_now / ((time_now << 24) >> 24);
+        } else {
+            random_seed_ = seed;
+        }
+        srand(random_seed_);
+    }
     ~Solver() {}
     void LoadGraph(const char *path);
     int Solve();
@@ -28,20 +36,17 @@ protected:
             f1(facility1), d1(distance1), f2(facility2), d2(distance2) {}
     };
 protected:
-    void Init();  //Initialization dist_table_,tabu_table,fd_table,choosed_facility
     void GenInitSolution();
+    int RandomVertex() { return rand() % vertex_num_; }
     bool Check();  //Check the validity of the solution
 private:
     int facility_num_;
     int vertex_num_;
     int instance_type_;
+    unsigned int random_seed_;
     double best_objval_;  //best objective value
     std::vector<std::vector<double>> graph_matrix_;  //the origin graph form instance
-    std::vector<std::vector<double>> graph_posmap_;  //graph expressed as position map
-    std::vector<std::vector<double>> shortest_dist_;  //the shortest distance table for all the nodes
-    std::vector<std::vector<int>> shortest_path_;  //the shortest path table for all the nodes, i->...->shortest_path_[i][j]->j
     std::vector<std::vector<int>> tabu_table_;
-    std::vector<int> degrees_;  //the neighbors of a node
     std::vector<FD> fd_table_;  //facility and distance table for every node
     std::vector<int> choosed_facility_;
 };
