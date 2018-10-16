@@ -15,6 +15,7 @@ public:
     enum InstanceType { TSP, TXT };
     const double kINF = INT32_MAX;
     const int kConsiderRange = 3;
+    const int kMaxTabuSteps = 10;
     const unsigned int kRandomSeed;
 public:
     explicit Solver(int P = 0, unsigned int seed = 99995011 / (time(NULL) % 255) + 1) :
@@ -39,17 +40,23 @@ protected:
     void GenInitSolution();
     int RandomVertex() { return rand() % vertex_num_; }
     void GetKthNeighbors(int node, int k, std::vector<Edge> &res);
+    void FindMove(int &choosed_user, int &choosed_facility);
+    void MakeMove(int choosed_user, int choosed_facility);
     bool Check();  //Check the validity of the solution
 private:
     int facility_num_;
     int vertex_num_;
     int instance_type_;
     double best_objval_;  //best objective value
+    double current_objval_;
+    int hail_user_;  //the user node on the longest service edge
+    int iterator_num_;
     std::vector<std::vector<double>> graph_matrix_;  //the origin graph form instance
-    std::vector<std::vector<Edge>> dist_table_;
+    std::vector<std::vector<Edge>> sorted_neighbors_;
     std::vector<std::vector<int>> tabu_table_;
     std::vector<FDPair> FDtable_;  //facility and distance table for every node
     std::vector<int> facility_nodes_;
+    std::vector<int> best_facility_nodes_;
     std::vector<bool> isfacility_;
 };
 
