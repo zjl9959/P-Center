@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 #include <set>
 #include <cassert>
 
@@ -44,7 +45,8 @@ void Solver::LoadGraph(const char * path) {
             for (int k = 0; k < vertex_num_; ++k)
                 for (int i = 0; i < vertex_num_; ++i)
                     for (int j = 0; j < vertex_num_; ++j)
-                        if (graph_matrix_[i][j] < graph_matrix_[i][k] + graph_matrix_[k][j])
+                        if (graph_matrix_[i][k] != kINF && graph_matrix_[k][j] != kINF &&
+                            graph_matrix_[i][j] > graph_matrix_[i][k] + graph_matrix_[k][j])
                             graph_matrix_[i][j] = graph_matrix_[i][k] + graph_matrix_[k][j];
             assert(kINF > 10 * max_dist);
             ifs.close();
@@ -79,18 +81,19 @@ void Solver::LoadGraph(const char * path) {
 }
 
 void Solver::Solve() {
+    cout << "---------------START SOLVER---------------" << endl;
     GenInitSolution();
     TabuSearch();
     vector<int> result;
     result = GetResult();
     if (Check()) {
-        cout << "--------------------------------------" << endl;
+        cout << "---------------RESULT INFO---------------" << endl;
         cout << "\t instance \t iterations \t obj \t facilitys" << endl;
         cout << "\t" << instance_name_ << iterator_num_ << best_objval_;
         for (int i = 0; i < result.size(); ++i) {
             cout << result[i] << ",";
         }
-        cout << "\b\a";
+        cout << "\b\a" << endl;
     }
 }
 
@@ -103,23 +106,26 @@ std::vector<int> Solver::GetResult() {
 
 void Solver::GenInitSolution() {
     //sort the neighbors by distance for every node
-    sorted_neighbors_.resize(vertex_num_);
-    vector<Edge> neighbors;
+    vector<vector<Edge>> sorted_neighbors(vertex_num_);
     for (int i = 0; i < vertex_num_; ++i) {
-        neighbors.clear();
         for (int j = 0; j < vertex_num_; ++j) {
             if (graph_matrix_[i][j] != kINF)
-                neighbors.push_back(Edge(j, graph_matrix_[i][j]));
+                sorted_neighbors[i].push_back(Edge(j, graph_matrix_[i][j]));
         }
-        sort_heap(neighbors.begin(),neighbors.end(), [](Edge &lhs, Edge &rhs) {
+        sort(sorted_neighbors[i].begin(), sorted_neighbors[i].end(), [](Edge &lhs, Edge &rhs) {
             return lhs.dist < rhs.dist; });
-        sorted_neighbors_.push_back(neighbors);
+    }
+    sorted_neighbors_.resize(vertex_num_);
+    for (int i = 0; i < vertex_num_; ++i) {
+        sorted_neighbors_[i].resize(sorted_neighbors[i].size());
+        for (int j = 0; j < vertex_num_; ++j)
+            sorted_neighbors_[i][j] = sorted_neighbors[i][j].node;
     }
     int choosed_facility_num = 0;
-    facility_nodes_.resize(facility_num_);
     isfacility_.resize(vertex_num_);
     //choose the first center randomly
-    facility_nodes_[choosed_facility_num++] = RandomVertex();
+    facility_nodes_.push_back(RandomVertex());
+    choosed_facility_num++;
     isfacility_[facility_nodes_[0]] = true;
     while (choosed_facility_num < facility_num_) {
         //get the longest service edge
@@ -138,11 +144,11 @@ void Solver::GenInitSolution() {
             }
         }
         //random select a node form the kth nearest neighbor of longest_user_node
-        vector<Edge> neighborks;
+        vector<int> neighborks;
         GetKthNeighbors(longest_service_node, kConsiderRange, neighborks);
         assert(neighborks.size());  //neighborks size should larger than 0
-        facility_nodes_[choosed_facility_num++] = neighborks[rand() % neighborks.size()].node;
-        isfacility_[facility_nodes_[choosed_facility_num - 1]] = true;
+        facility_nodes_.push_back(neighborks[rand() % neighborks.size()]);
+        isfacility_[facility_nodes_[choosed_facility_num++]] = true;
     }
     //Init tabu table
     user_tabu_table_.resize(vertex_num_);
@@ -150,20 +156,20 @@ void Solver::GenInitSolution() {
     for (int i = 0; i < vertex_num_; ++i)
         user_tabu_table_[i] = facility_tabu_table_[i] = 0;
     //Init FDTable and object value
-    best_objval_ = -kINF;
+    current_objval_ = -kINF;
     FDtable_.resize(vertex_num_);
     for (int i = 0; i < vertex_num_; ++i) {
-        Edge first_facility, second_facility;
         for (int f : facility_nodes_)
-            if (graph_matrix_[i][f] < first_facility.dist) {
-                first_facility.node = f;
-                first_facility.dist = graph_matrix_[i][f];
-            } else if (graph_matrix_[i][f] < second_facility.dist) {
-                second_facility.node = f;
-                second_facility.node = graph_matrix_[i][f];
+            if (graph_matrix_[f][i] < FDtable_[i].nearest.dist) {
+                FDtable_[i].second_nearest = FDtable_[i].nearest;
+                FDtable_[i].nearest.node = f;
+                FDtable_[i].nearest.dist = graph_matrix_[i][f];
+            } else if (graph_matrix_[f][i] < FDtable_[i].second_nearest.dist) {
+                FDtable_[i].second_nearest.node = f;
+                FDtable_[i].second_nearest.dist = graph_matrix_[i][f];
             }
-        if (current_objval_ < first_facility.dist)
-            current_objval_ = first_facility.dist;
+        if (current_objval_ < FDtable_[i].nearest.dist)
+            current_objval_ = FDtable_[i].nearest.dist;
     }
     //record the best solution
     best_objval_ = current_objval_;
@@ -173,24 +179,26 @@ void Solver::GenInitSolution() {
 }
 
 //GetKthNeighbor who is not facility, res should be empty
-void Solver::GetKthNeighbors(int node, int k, vector<Edge>& res) {
+void Solver::GetKthNeighbors(int node, int k, vector<int>& res) {
     int index = 0;
     while (k--) {
-        while (isfacility_[sorted_neighbors_[node][index++].node]) {
+        while (isfacility_[sorted_neighbors_[node][index++]]) {
             if (index == vertex_num_)return;
         }
         res.push_back(sorted_neighbors_[node][index - 1]);
+        if (index == vertex_num_)return;
     }
 }
 
-void Solver::FindMove(int & choosed_user, int & choosed_facility) {
+void Solver::FindMove(int k, int & choosed_user, int & choosed_facility) {
     int hail_user;  //the user node on the longest service edge
     double hail_dist = -kINF;
     int tabu_best_user = NONE, tabu_best_facility = NONE, notabu_best_user = NONE, 
-        notabu_best_facility = NONE, tabu_same_count = 0, notabu_same_count = 0;
+        notabu_best_facility = NONE, tabu_same_count = 1, notabu_same_count = 1;
     double tabu_best_obj = kINF, notabu_best_obj = kINF;
-    vector<Edge> neighborks;  //the k's nearest neighbors of the hail user
+    vector<int> neighborks;  //the k's nearest neighbors of the hail user
     vector<FDPair> temp_FDtable;
+    if (k > vertex_num_ - facility_num_)k = vertex_num_ - facility_num_;
     //get the longest service node and the distance
     for (int i = 0; i < vertex_num_; ++i) {
         if (FDtable_[i].nearest.dist > hail_dist) {
@@ -199,52 +207,59 @@ void Solver::FindMove(int & choosed_user, int & choosed_facility) {
         }
     }
     GetKthNeighbors(hail_user, kConsiderRange, neighborks);
-    for (Edge e:neighborks) {
-        if (e.dist < hail_dist) {  //consider the neighbor who can improve the object value
+    for (int n:neighborks) {
+        if (graph_matrix_[hail_user][n] < hail_dist) {  //consider the neighbor who can improve the object value
             temp_FDtable = FDtable_;  //copy the oldversion FDtable
             //update the FDtable after add a facility
             for (int i = 0; i < vertex_num_; ++i) {
-                if (temp_FDtable[i].nearest.dist > graph_matrix_[e.node][i]) {
-                    temp_FDtable[i].nearest = e;
+                if (temp_FDtable[i].nearest.dist > graph_matrix_[n][i]) {
                     temp_FDtable[i].second_nearest = temp_FDtable[i].nearest;
+                    temp_FDtable[i].nearest.node = n;
+                    temp_FDtable[i].nearest.dist = graph_matrix_[n][i];
                 }
-                else if (temp_FDtable[i].second_nearest.dist > graph_matrix_[e.node][i]) {
-                    temp_FDtable[i].second_nearest = e;
+                else if (temp_FDtable[i].second_nearest.dist > graph_matrix_[n][i]) {
+                    temp_FDtable[i].second_nearest.node = n;
+                    temp_FDtable[i].second_nearest.dist = graph_matrix_[n][i];
                 }
             }
             //remove a facility and evluate it
             for (int f : facility_nodes_) {  //f is the facility to remove
                 double longest_service_dist = -kINF;
                 for (int i = 0; i < vertex_num_; ++i)
-                    if (f = temp_FDtable[i].nearest.node && longest_service_dist < temp_FDtable[i].second_nearest.dist)
-                        longest_service_dist = temp_FDtable[i].second_nearest.dist;
-                //record best move
-                if (facility_tabu_table_[e.node] < iterator_num_ || user_tabu_table_[f] < iterator_num_) {  //no tabu
-                    if (longest_service_dist < tabu_best_obj) {
-                        tabu_best_obj = longest_service_dist;
-                        tabu_best_user = e.node;
-                        tabu_best_facility = f;
-                    } else if (longest_service_dist == tabu_best_obj && (rand() % tabu_same_count) == 0) {
-                        //pool sampling for same movment
-                        tabu_best_obj = longest_service_dist;
-                        tabu_best_user = e.node;
-                        tabu_best_facility = f;
-                        tabu_same_count++;
+                    if (f == temp_FDtable[i].nearest.node) {
+                        if (longest_service_dist < temp_FDtable[i].second_nearest.dist)
+                            longest_service_dist = temp_FDtable[i].second_nearest.dist;
                     }
-                } else if (longest_service_dist < notabu_best_obj) {  //tabu
-                    notabu_best_obj = longest_service_dist;
-                    notabu_best_user = e.node;
-                    notabu_best_facility = f;
-                } else if (longest_service_dist == notabu_best_obj && (rand() % notabu_same_count) == 0) {
-                    notabu_best_obj = longest_service_dist;
-                    notabu_best_user = e.node;
-                    notabu_best_facility = f;
-                    notabu_same_count++ ;
+                    else if (longest_service_dist < temp_FDtable[i].nearest.dist) {
+                        longest_service_dist = temp_FDtable[i].nearest.dist;
+                    }
+                //record best move
+                if (facility_tabu_table_[n] < iterator_num_ && user_tabu_table_[f] < iterator_num_) {  //no tabu
+                    if (longest_service_dist < notabu_best_obj) {
+                        notabu_best_obj = longest_service_dist;
+                        notabu_best_user = n;
+                        notabu_best_facility = f;
+                    } else if (longest_service_dist == notabu_best_obj && (rand() % notabu_same_count) == 0) {
+                        //pool sampling for same movment
+                        notabu_best_obj = longest_service_dist;
+                        notabu_best_user = n;
+                        notabu_best_facility = f;
+                        notabu_same_count++;
+                    }
+                } else if (longest_service_dist < tabu_best_obj) {  //tabu
+                    tabu_best_obj = longest_service_dist;
+                    tabu_best_user = n;
+                    tabu_best_facility = f;
+                } else if (longest_service_dist == tabu_best_obj && (rand() % tabu_same_count) == 0) {
+                    tabu_best_obj = longest_service_dist;
+                    tabu_best_user = n;
+                    tabu_best_facility = f;
+                    tabu_same_count++ ;
                 }
             }
         }
     }
-    if (tabu_best_obj > best_objval_&&tabu_best_obj > notabu_best_obj) {  //release tabu
+    if (tabu_best_obj < best_objval_&&tabu_best_obj < notabu_best_obj) {  //release tabu
         current_objval_ = tabu_best_obj;
         choosed_user = tabu_best_user;
         choosed_facility = tabu_best_facility;
@@ -253,6 +268,9 @@ void Solver::FindMove(int & choosed_user, int & choosed_facility) {
         choosed_user = notabu_best_user;
         choosed_facility = notabu_best_facility;
     }
+    if (choosed_user == -1 || choosed_facility == -1) {
+        FindMove(2 * k, choosed_user, choosed_facility);
+    }
 }
 
 void Solver::MakeMove(int choosed_user, int choosed_facility) {
@@ -260,6 +278,7 @@ void Solver::MakeMove(int choosed_user, int choosed_facility) {
     for(int i=0;i<facility_nodes_.size();++i)
         if (facility_nodes_[i] = choosed_facility) {
             facility_nodes_[i] = choosed_user;
+            break;
         }
     isfacility_[choosed_user] = true;
     isfacility_[choosed_facility] = false;
@@ -285,6 +304,15 @@ void Solver::MakeMove(int choosed_user, int choosed_facility) {
                     FDtable_[i].second_nearest.node = f;
                 }
             }
+        } else if (FDtable_[i].second_nearest.node = choosed_facility) {
+            FDtable_[i].second_nearest.dist = kINF;
+            for (int f : facility_nodes_) {  //update second nearest facility
+                if (graph_matrix_[f][i] >= FDtable_[i].nearest.dist&&
+                    graph_matrix_[f][i] < FDtable_[i].second_nearest.dist && f != FDtable_[i].nearest.node) {
+                    FDtable_[i].second_nearest.dist = graph_matrix_[f][i];
+                    FDtable_[i].second_nearest.node = f;
+                }
+            }
         }
     }
     //update tabu tables
@@ -300,8 +328,9 @@ void Solver::MakeMove(int choosed_user, int choosed_facility) {
 
 void Solver::TabuSearch() {
     int choose_user, choose_facility;
+    iterator_num_ = 1;
     while (!IsTimeOut() && iterator_num_<kMaxTabuSteps) {
-        FindMove(choose_user,choose_facility);
+        FindMove(kConsiderRange, choose_user,choose_facility);
         MakeMove(choose_user,choose_facility);
         iterator_num_++;
     }
@@ -316,24 +345,49 @@ bool Solver::Check() {
         error_info << error_count++ <<". Facility num " << best_facility_nodes_.size() << " is not equal to " << facility_num_ << "\n";
         valid = false;
     }
-    set<int> facility_node_set;
+    set<int> facility_node_set;  //facility should not duplicate
     for (int f:best_facility_nodes_) {
         if (f < 0 || f >= vertex_num_) {
-            error_info << error_count++ <<". Facility node " << f << "is invalid !\n";
+            error_info << error_count++ <<". Facility node " << f + 1 << "is out of range !\n";
             valid = false;
         }
         if (facility_node_set.count(f)) {
-            error_info << error_count++ <<". Facility node " << f << " is duplicate !\n";
+            error_info << error_count++ <<". Facility node " << f + 1 << " is duplicate !\n";
             valid = false;
         } else {
             facility_node_set.insert(f);
         }
     }
     //check user_facility valid
-    //[TODO]
-    if (!valid) {  //print error infomation
-        cout << "-----------WRONG SOLUTION-------------" << endl;
-        cout << error_info.str() << "\a";
+    vector<Edge> user_facilitys(vertex_num_);
+    for (int i = 0; i < vertex_num_; ++i) {
+        Edge service_edge;
+        for (int f : best_facility_nodes_) {
+            if (service_edge.dist > graph_matrix_[f][i]) {
+                service_edge.node = f;
+                service_edge.dist = graph_matrix_[f][i];
+            }
+        }
+        user_facilitys[i] = service_edge;
+    }
+    double obj = -kINF;
+    for (int i = 0; i < vertex_num_; ++i) {
+        if (user_facilitys[i].dist == kINF) {
+            error_info << error_count++ << ". User node " << i + 1 << " has no facility !\n";
+            valid = false;
+        }
+        if (user_facilitys[i].dist > obj)
+            obj = user_facilitys[i].dist;
+    }
+    //check object value match
+    if (obj != best_objval_) {
+        error_info << error_count++ << ". Object value is not match " << obj << " -> " << best_objval_ << "\n";
+        valid = false;
+    }
+    //print error infomation
+    if (!valid) {
+        cout << "---------------WRONG SOLUTION---------------" << endl;
+        cout << error_info.str() << "\a" << endl;
     }
     return false;
 }

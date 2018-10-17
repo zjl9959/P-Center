@@ -41,8 +41,8 @@ protected:
 protected:
     void GenInitSolution();
     int RandomVertex() { return rand() % vertex_num_; }
-    void GetKthNeighbors(int node, int k, std::vector<Edge> &res);
-    void FindMove(int &choosed_user, int &choosed_facility);
+    void GetKthNeighbors(int node, int k, std::vector<int> &res);
+    void FindMove(int k, int &choosed_user, int &choosed_facility);
     void MakeMove(int choosed_user, int choosed_facility);
     void TabuSearch();
     bool IsTimeOut() { return (clock() - kStartClock) / 1000 > kTimeOutSeconds; }
@@ -57,7 +57,7 @@ private:
     int base_facility_tabu_steps_;
     std::string instance_name_;
     std::vector<std::vector<double>> graph_matrix_;  //the origin graph form instance
-    std::vector<std::vector<Edge>> sorted_neighbors_;
+    std::vector<std::vector<int>> sorted_neighbors_;
     std::vector<int> user_tabu_table_;
     std::vector<int> facility_tabu_table_;
     std::vector<FDPair> FDtable_;  //facility and distance table for every node
