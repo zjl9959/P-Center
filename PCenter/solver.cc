@@ -2,6 +2,8 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <set>
 #include <cassert>
 
 using namespace std;
@@ -77,20 +79,26 @@ void Solver::LoadGraph(const char * path) {
 }
 
 void Solver::Solve() {
+    GenInitSolution();
     TabuSearch();
+    vector<int> result;
+    result = GetResult();
     if (Check()) {
         cout << "--------------------------------------" << endl;
         cout << "\t instance \t iterations \t obj \t facilitys" << endl;
         cout << "\t" << instance_name_ << iterator_num_ << best_objval_;
-        for (int i = 0; i < best_facility_nodes_.size(); ++i) {
-            cout << best_facility_nodes_[i] << ",";
+        for (int i = 0; i < result.size(); ++i) {
+            cout << result[i] << ",";
         }
         cout << "\b\a";
     }
 }
 
 std::vector<int> Solver::GetResult() {
-    return best_facility_nodes_;
+    vector<int> res(best_facility_nodes_.size());
+    for (int i = 0; i < facility_num_; ++i)
+        res[i] = best_facility_nodes_[i] + 1;
+    return res;
 }
 
 void Solver::GenInitSolution() {
@@ -300,6 +308,33 @@ void Solver::TabuSearch() {
 }
 
 bool Solver::Check() {
+    //check facility valid
+    bool valid = true;
+    int error_count = 0;
+    ostringstream error_info;
+    if (facility_num_ != best_facility_nodes_.size()) {
+        error_info << error_count++ <<". Facility num " << best_facility_nodes_.size() << " is not equal to " << facility_num_ << "\n";
+        valid = false;
+    }
+    set<int> facility_node_set;
+    for (int f:best_facility_nodes_) {
+        if (f < 0 || f >= vertex_num_) {
+            error_info << error_count++ <<". Facility node " << f << "is invalid !\n";
+            valid = false;
+        }
+        if (facility_node_set.count(f)) {
+            error_info << error_count++ <<". Facility node " << f << " is duplicate !\n";
+            valid = false;
+        } else {
+            facility_node_set.insert(f);
+        }
+    }
+    //check user_facility valid
+    //[TODO]
+    if (!valid) {  //print error infomation
+        cout << "-----------WRONG SOLUTION-------------" << endl;
+        cout << error_info.str() << "\a";
+    }
     return false;
 }
 
