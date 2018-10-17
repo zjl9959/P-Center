@@ -69,6 +69,9 @@ void Solver::LoadGraph(const char * path) {
                 graph_posmap[node - 1].push_back(pos_x);
                 graph_posmap[node - 1].push_back(pos_y);
             }
+            graph_matrix_.resize(vertex_num_);
+            for (int i = 0; i < vertex_num_; ++i)
+                graph_matrix_[i].resize(vertex_num_);
             for (int i = 0; i < vertex_num_; ++i) {
                 for (int j = i; j < vertex_num_; ++j) {
                     graph_matrix_[i][j] = graph_matrix_[j][i] = sqrt(
@@ -88,8 +91,8 @@ void Solver::Solve() {
     result = GetResult();
     if (Check()) {
         cout << "---------------RESULT INFO---------------" << endl;
-        cout << "\t instance \t iterations \t obj \t facilitys" << endl;
-        cout << "\t" << instance_name_ << iterator_num_ << best_objval_;
+        cout << "instance \t iterations \t obj \t facilitys" << endl;
+        cout << instance_name_ << "\t " << iterator_num_ << "\t  " << best_objval_ << "\t";
         for (int i = 0; i < result.size(); ++i) {
             cout << result[i] << ",";
         }
@@ -206,7 +209,7 @@ void Solver::FindMove(int k, int & choosed_user, int & choosed_facility) {
             hail_dist = FDtable_[i].nearest.dist;
         }
     }
-    GetKthNeighbors(hail_user, kConsiderRange, neighborks);
+    GetKthNeighbors(hail_user, k, neighborks);
     for (int n:neighborks) {
         if (graph_matrix_[hail_user][n] < hail_dist) {  //consider the neighbor who can improve the object value
             temp_FDtable = FDtable_;  //copy the oldversion FDtable
@@ -234,7 +237,7 @@ void Solver::FindMove(int k, int & choosed_user, int & choosed_facility) {
                         longest_service_dist = temp_FDtable[i].nearest.dist;
                     }
                 //record best move
-                if (facility_tabu_table_[n] < iterator_num_ && user_tabu_table_[f] < iterator_num_) {  //no tabu
+                if (facility_tabu_table_[n] < iterator_num_ || user_tabu_table_[f] < iterator_num_) {  //no tabu
                     if (longest_service_dist < notabu_best_obj) {
                         notabu_best_obj = longest_service_dist;
                         notabu_best_user = n;
@@ -260,6 +263,7 @@ void Solver::FindMove(int k, int & choosed_user, int & choosed_facility) {
         }
     }
     if (tabu_best_obj < best_objval_&&tabu_best_obj < notabu_best_obj) {  //release tabu
+    //if(tabu_best_obj < notabu_best_obj) {
         current_objval_ = tabu_best_obj;
         choosed_user = tabu_best_user;
         choosed_facility = tabu_best_facility;
@@ -276,7 +280,7 @@ void Solver::FindMove(int k, int & choosed_user, int & choosed_facility) {
 void Solver::MakeMove(int choosed_user, int choosed_facility) {
     //update facility_nodes_, is_facility_
     for(int i=0;i<facility_nodes_.size();++i)
-        if (facility_nodes_[i] = choosed_facility) {
+        if (facility_nodes_[i] == choosed_facility) {
             facility_nodes_[i] = choosed_user;
             break;
         }
@@ -304,7 +308,7 @@ void Solver::MakeMove(int choosed_user, int choosed_facility) {
                     FDtable_[i].second_nearest.node = f;
                 }
             }
-        } else if (FDtable_[i].second_nearest.node = choosed_facility) {
+        } else if (FDtable_[i].second_nearest.node == choosed_facility) {
             FDtable_[i].second_nearest.dist = kINF;
             for (int f : facility_nodes_) {  //update second nearest facility
                 if (graph_matrix_[f][i] >= FDtable_[i].nearest.dist&&
@@ -389,7 +393,7 @@ bool Solver::Check() {
         cout << "---------------WRONG SOLUTION---------------" << endl;
         cout << error_info.str() << "\a" << endl;
     }
-    return false;
+    return valid;
 }
 
 }

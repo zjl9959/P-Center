@@ -14,8 +14,8 @@ namespace pcenter_solver {
 class Solver {
 public:
     const double kINF = INT32_MAX;
-    const int kConsiderRange = 3;
-    const int kTimeOutSeconds = 300;
+    const int kConsiderRange = 50;
+    const int kTimeOutSeconds = 30;
     const int kMaxTabuSteps = INT32_MAX;
     const unsigned int kRandomSeed;
     const clock_t kStartClock;
