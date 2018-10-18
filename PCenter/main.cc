@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
             cfg.max_tabu_steps = atoi(argv[++i]);
     }
     if (instance_name != nullptr) {
-        PCenterSolver solver(instance_name, facility_num);
+        PCenterSolver solver(instance_name, cfg, facility_num);
         solver.Solve();
         solver.Record();
     } else {
