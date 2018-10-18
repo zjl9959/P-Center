@@ -126,10 +126,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cc" />
-    <ClCompile Include="solver.cc" />
+    <ClCompile Include="pcenter_solver.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="solver.h" />
+    <ClInclude Include="pcenter_solver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

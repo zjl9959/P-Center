@@ -18,12 +18,12 @@
     <ClCompile Include="main.cc">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="solver.cc">
+    <ClCompile Include="pcenter_solver.cc">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="solver.h">
+    <ClInclude Include="pcenter_solver.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
