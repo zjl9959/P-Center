@@ -9,6 +9,8 @@ def LoadConfigs():
         labels = f.readline()[:-1].split(' ')
         lines = f.readlines()  #parser infomation
         for line in lines:
+            if line == 'break\n':
+                break
             info = line[:-1].split(' ')
             cfg = list()
             for i in range(len(labels)):

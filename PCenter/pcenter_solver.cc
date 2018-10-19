@@ -221,7 +221,6 @@ void PCenterSolver::FindMove(int k, int & choosed_user, int & choosed_facility) 
     double tabu_best_obj = kINF, notabu_best_obj = kINF;
     vector<int> neighborks;  //the k's nearest neighbors of the hail user
     vector<FDPair> temp_FDtable;
-    if (k > vertex_num_ - facility_num_)k = vertex_num_ - facility_num_;
     //get the longest service node and the distance
     for (int i = 0; i < vertex_num_; ++i) {
         if (FDtable_[i].nearest.dist > hail_dist) {
@@ -291,7 +290,16 @@ void PCenterSolver::FindMove(int k, int & choosed_user, int & choosed_facility) 
         choosed_facility = notabu_best_facility;
     }
     if (choosed_user == -1 || choosed_facility == -1) {
-        FindMove(2 * k, choosed_user, choosed_facility);
+        if (2 * k < vertex_num_ - facility_num_) {  //expand k and findmove again
+            FindMove(2 * k, choosed_user, choosed_facility);
+        } else {  //random select a user and facility
+            int choosed_user_index = RandomVertex();
+            while (isfacility_[choosed_user_index]) {
+                choosed_user_index = RandomVertex();
+            }
+            choosed_user = choosed_user_index;
+            choosed_facility = facility_nodes_[rand() % facility_nodes_.size()];
+        }
     }
 }
 
