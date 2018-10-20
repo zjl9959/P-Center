@@ -2,16 +2,16 @@
 
 ## 仓库文件目录
 
-deploy/ 项目部署
-    instance/ 存放算例
-    analyze.py 用于分析算法或配置性能
-    benchmark.py 用于批量测试
-    config.txt 用于配置批量测试参数
-doc/ 相关文件
-PCenter/ 代码实现
-    main.cc
-    pcenter_solver.cc
-    pcenter_solver.h
+    deploy/ 项目部署
+      instance/ 存放算例
+        analyze.py 用于分析算法或配置性能
+        benchmark.py 用于批量测试
+        config.txt 用于配置批量测试参数
+    doc/ 相关文件
+    PCenter/ 代码实现
+        main.cc
+        pcenter_solver.cc
+        pcenter_solver.h
 
 ## 使用方法
 
@@ -26,5 +26,5 @@ PCenter/ 代码实现
 + -t: time out seconds
 + -s: random seed value
 + -m: max iteration steps
-+ 示例
++ 示例：
     > PCenter -i pr226.tsp -p 40 -t 3
