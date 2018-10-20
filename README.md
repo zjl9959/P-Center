@@ -3,7 +3,7 @@
 ## 仓库文件目录
 
     deploy/ 项目部署
-      instance/ 存放算例
+        instance/ 存放算例
         analyze.py 用于分析算法或配置性能
         benchmark.py 用于批量测试
         config.txt 用于配置批量测试参数
