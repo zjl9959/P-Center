@@ -22,13 +22,8 @@ void PCenterSolver::LoadGraph(const string path) {
             int edge_num = 0, node1 = 0, node2 = 0;
             cout << "Load instance: " << kInstanceName << endl;
             ifs >> vertex_num_ >> edge_num >> facility_num_;
-            //resize graph and set it's default value as 0
-            graph_matrix_.resize(vertex_num_);
-            for (int i = 0; i < vertex_num_; ++i)
-                graph_matrix_[i].resize(vertex_num_);
-            for (int i = 0; i < vertex_num_; ++i)
-                for (int j = 0; j < vertex_num_; ++j)
-                    graph_matrix_[i][j] = kINF;
+            //resize graph and set it's default value as kINF
+            graph_matrix_.resize(vertex_num_, vector<double>(vertex_num_, kINF));
             for (int i = 0; i < vertex_num_; ++i)
                 graph_matrix_[i][i] = 0;
             //save value to graph
@@ -66,9 +61,7 @@ void PCenterSolver::LoadGraph(const string path) {
                 graph_posmap[node - 1].push_back(pos_x);
                 graph_posmap[node - 1].push_back(pos_y);
             }
-            graph_matrix_.resize(vertex_num_);
-            for (int i = 0; i < vertex_num_; ++i)
-                graph_matrix_[i].resize(vertex_num_);
+            graph_matrix_.resize(vertex_num_, vector<double>(vertex_num_, kINF));
             for (int i = 0; i < vertex_num_; ++i) {
                 for (int j = i; j < vertex_num_; ++j) {
                     graph_matrix_[i][j] = graph_matrix_[j][i] = sqrt(
@@ -174,10 +167,8 @@ void PCenterSolver::GenInitSolution() {
         isfacility_[facility_nodes_[choosed_facility_num++]] = true;
     }
     //Init tabu table
-    user_tabu_table_.resize(vertex_num_);
-    facility_tabu_table_.resize(vertex_num_);
-    for (int i = 0; i < vertex_num_; ++i)
-        user_tabu_table_[i] = facility_tabu_table_[i] = 0;
+    user_tabu_table_.resize(vertex_num_, 0);
+    facility_tabu_table_.resize(vertex_num_, 0);
     //Init FDTable and object value
     current_objval_ = -kINF;
     FDtable_.resize(vertex_num_);
@@ -256,17 +247,19 @@ void PCenterSolver::FindMove(int k, int & choosed_user, int & choosed_facility) 
                     //record best move
                     if (facility_tabu_table_[n] < iterator_num_ || user_tabu_table_[f] < iterator_num_) {  //no tabu
                         if (longest_service_dist < notabu_best_obj) {
+                            notabu_same_count = 1;
                             notabu_best_obj = longest_service_dist;
                             notabu_best_user = n;
                             notabu_best_facility = f;
                         } else if (longest_service_dist == notabu_best_obj && (rand() % notabu_same_count) == 0) {
-                            //pool sampling for same movment
+                            //pool sampling
                             notabu_best_obj = longest_service_dist;
                             notabu_best_user = n;
                             notabu_best_facility = f;
                             notabu_same_count++;
                         }
                     } else if (longest_service_dist < tabu_best_obj) {  //tabu
+                        tabu_same_count = 1;
                         tabu_best_obj = longest_service_dist;
                         tabu_best_user = n;
                         tabu_best_facility = f;
