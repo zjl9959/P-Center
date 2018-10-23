@@ -253,7 +253,6 @@ void PCenterSolver::FindMove(int k, int & choosed_user, int & choosed_facility) 
                             notabu_best_facility = f;
                         } else if (longest_service_dist == notabu_best_obj && (rand() % notabu_same_count) == 0) {
                             //pool sampling
-                            notabu_best_obj = longest_service_dist;
                             notabu_best_user = n;
                             notabu_best_facility = f;
                             notabu_same_count++;
@@ -264,7 +263,6 @@ void PCenterSolver::FindMove(int k, int & choosed_user, int & choosed_facility) 
                         tabu_best_user = n;
                         tabu_best_facility = f;
                     } else if (longest_service_dist == tabu_best_obj && (rand() % tabu_same_count) == 0) {
-                        tabu_best_obj = longest_service_dist;
                         tabu_best_user = n;
                         tabu_best_facility = f;
                         tabu_same_count++;
