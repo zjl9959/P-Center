@@ -15,7 +15,7 @@
 
 ## 使用方法
 
-将源代码编译成功后，在**deploy**文件夹下会生成__PCenter.*__可执行程序，在shell中使用命令行传参的方式调用，或者配置好config.txt文件后执行benchmark.py脚本进行批量测试。
+将源代码编译成功后，在**deploy**文件夹下会生成**PCenter.exe**可执行程序，在shell中使用命令行传参的方式调用，或者配置好config.txt文件后执行benchmark.py脚本进行批量测试。
 注意：_需要提前将算例拷贝到deploy/instance/文件夹下_
 
 ### 命令行参数
